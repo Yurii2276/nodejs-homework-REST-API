@@ -18,16 +18,16 @@ const router = express.Router()
 router.get('/', authenticate, getContacts)
 
 
-router.get('/:contactId', getContactnbyId)
+router.get('/:contactId', authenticate, getContactnbyId)
 
 router.post('/', authenticate, validator(addContactSchema), postContact)
 
-router.delete('/:contactId', deleteContact)
+router.delete('/:contactId', authenticate, deleteContact)
 
-router.put('/:contactId', validator(addContactSchema), putContact)
+router.put('/:contactId', authenticate, validator(addContactSchema), putContact)
 
 router.patch(
-  "/:contactId/favorite", validator(updateFavoriteSchema), updateContactFavorite);
+  "/:contactId/favorite", authenticate, validator(updateFavoriteSchema), updateContactFavorite);
 
 
 module.exports = router
