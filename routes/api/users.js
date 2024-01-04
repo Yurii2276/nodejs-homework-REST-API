@@ -13,6 +13,7 @@ const authenticate = require("../../middlewares/authenticate");
 const { validator } = require("../../middlewares/validationMidlewares");
 const { schemas } = require("../../models/users");
 const upload = require("../../middlewares/uploadFile");
+const resizeAvartar = require("../../middlewares/resizeAvatar");
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ router.patch(
   "/avatars",
   authenticate,
   upload.single("avatar"),
+  ctrlWrapper(resizeAvartar),
   ctrlWrapper(updateAvatar)
 );
 
