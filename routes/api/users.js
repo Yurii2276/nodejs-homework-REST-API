@@ -6,6 +6,8 @@ const {
   getCurrentUser,
   updateSubscription,
   updateAvatar,
+  verifyEmail,
+  resendVerifyEmail,
 } = require("../../controllers/usersController");
 
 const ctrlWrapper = require("../../helpers/apiHelpers");
@@ -38,6 +40,13 @@ router.patch(
   upload.single("avatar"),
   ctrlWrapper(resizeAvartar),
   ctrlWrapper(updateAvatar)
+);
+
+router.get("/verify/:verificationToken", ctrlWrapper(verifyEmail));
+router.post(
+  "/verify",
+  validator(schemas.verifyEmailShema),
+  ctrlWrapper(resendVerifyEmail)
 );
 
 module.exports = router;

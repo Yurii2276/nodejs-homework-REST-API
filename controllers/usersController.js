@@ -5,10 +5,13 @@ const gravatar = require("gravatar");
 const fs = require("fs/promises");
 const path = require("path");
 
+const { nanoid } = require("nanoid");
+
 const { SECRET_KEY } = process.env;
 
 const RequestError = require("../helpers/requestError");
 const { User } = require("../models/users");
+const sendEmail = require("../helpers/sendEmail");
 
 const register = async (req, res) => {
   const { email, password } = req.body;
@@ -18,11 +21,23 @@ const register = async (req, res) => {
   }
   const avatarURL = gravatar.url(email);
   const hashPassword = await bcrypt.hash(password, 10);
-  const result = await User.create({ email, password: hashPassword, avatarURL });
+  const verificationToken = nanoid();
+  const result = await User.create({ email, password: hashPassword, avatarURL, verificationToken });
+
+  const mail = {
+    to: email,
+    subject: "Підтвердження реєстрації на сайті",
+    text: "Привіт. Ми тестуємо надсилання листів!",
+    html: `<a href="http://localhost:3000/users/verify/${verificationToken}" target="_blank">Натисніть для підтвердження</a>`,
+  };
+
+  await sendEmail(mail);
+
   res.status(201).json({
     email: result.email,
     password: result.password,
     avatarURL,
+    verificationToken,
   });
 };
 
@@ -33,6 +48,10 @@ const login = async (req, res) => {
 
   if (!user || !passwordCompare) {
     throw RequestError(401, "Email or password is wrong");
+  }
+
+  if (!user.verify) {
+    throw RequestError(400, "Email not verify"); 
   }
 
   const payload = { id: user._id };
@@ -89,6 +108,46 @@ const updateAvatar = async (req, res) => {
   }
 };
 
+const verifyEmail = async (req, res) => {
+  const { verificationToken } = req.params;
+  const user = await User.findOne({ verificationToken });
+  if (!user) {
+    throw RequestError(404, "Not Found");
+  }
+
+  await User.findByIdAndUpdate(user._id, {
+    verify: true,
+    verificationToken: "",
+  });
+
+  res.json({
+    message: "Verification successful",
+  });
+};
+
+const resendVerifyEmail = async (req, res) => {
+  const { email } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw RequestError(404, "Not Found");
+  }
+  if (user.verify) {
+    throw RequestError(400, "Verification has already been passed");
+  }
+
+  const mail = {
+    to: email,
+    subject: "Підтвердження реєстрації на сайті",
+    html: `<a href="http://localhost:3000/users/verify/${user.verificationToken}" target="_blank">Натисніть для підтвердження</a>`,
+  };
+  await sendEmail(mail);
+
+  res.json({
+    message: "Verification email sent",
+  });
+};
+
+
 module.exports = {
   register,
   login,
@@ -96,4 +155,6 @@ module.exports = {
   getCurrentUser,
   updateSubscription,
   updateAvatar,
+  verifyEmail,
+  resendVerifyEmail,
 };
